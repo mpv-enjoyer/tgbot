@@ -56,7 +56,13 @@ private:
         if (in.fail()) return { };
         std::ostringstream sstr;
         sstr << in.rdbuf();
-        return sstr.str();
+        std::string str = sstr.str();
+        if (str.find('\n') != std::string::npos)
+        {
+            printf("Got ENDL in API_TOKEN");
+            return { };
+        }
+        return str;
     }
     Secrets()
     {
