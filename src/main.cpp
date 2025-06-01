@@ -57,10 +57,9 @@ private:
         std::ostringstream sstr;
         sstr << in.rdbuf();
         std::string str = sstr.str();
-        if (str.find('\n') != std::string::npos)
+        while (str.find('\n') != std::string::npos)
         {
-            printf("Got ENDL in API_TOKEN");
-            return { };
+            str.erase(str.begin() + str.find('\n'));
         }
         return str;
     }
