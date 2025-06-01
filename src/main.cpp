@@ -126,6 +126,7 @@ int main() {
     });
 
     try {
+        std::cout << "API token is " << bot.getToken() << std::endl;
         logToOwner(bot, secrets, "Bot username: ", bot.getApi().getMe()->username);
         bot.getApi().deleteWebhook();
 
