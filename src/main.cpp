@@ -119,6 +119,9 @@ int main() {
         auto str = message->text.substr(prefix.size());
         bot.getApi().sendMessage(message->chat->id, str);
     });
+    bot.getEvents().onCommand("what", [&bot](Message::Ptr message) {
+        bot.getApi().sendMessage(message->chat->id, "ничо");
+    });
 
     signal(SIGINT, [](int s) {
         printf("got SIGINT\n");
