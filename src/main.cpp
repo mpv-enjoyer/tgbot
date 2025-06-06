@@ -119,7 +119,7 @@ int main() {
     bot.getEvents().onCommand("скажи_привет", [&bot](Message::Ptr message) {
         bot.getApi().sendMessage(message->chat->id, "привет)");
     });
-    bot.getEvents().onCommand("скажи ", [&bot](Message::Ptr message) {
+    bot.getEvents().onCommand("скажи", [&bot](Message::Ptr message) {
         const static std::string prefix = "/скажи ";
         auto str = message->text.substr(prefix.size());
         bot.getApi().sendMessage(message->chat->id, str);
