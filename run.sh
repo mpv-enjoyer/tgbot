@@ -7,6 +7,6 @@ do
     set -e
     docker build -t bot .
     set +e
-    docker run --rm bot
+    docker run --rm -v ./data:/data bot /data/db
     retVal=$?
 done
