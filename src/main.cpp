@@ -12,11 +12,16 @@
 
 #include <tgbot/tgbot.h>
 
+#include <sqlite3.h>
+#include <memory>
+#include <filesystem>
+
 enum ErrorCodes
 {
     OK = 0,
     NO_SECRET = 1,
-    REQUEST_REBOOT = 2
+    REQUEST_REBOOT = 2,
+    NO_DB = 3
 };
 
 namespace StringTools
@@ -88,9 +93,69 @@ void logToOwner(Bot& bot, const Secrets& secrets, T... message)
     bot.getApi().sendMessage(secrets.getOwnerID(), output);
 };
 
-int main() {
+struct SQLite
+{
+    static int callback(void *sqlite_notype, int argc, char **argv, char **azColName) {
+        auto sqlite = reinterpret_cast<SQLite*>(sqlite_notype);
+        for(int i=0; i < argc; i++) {
+            sqlite->response_buffer.push_back({argv[i], azColName[i]});
+            printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+        }
+        printf("\n");
+        return 0;
+    }
+
+    int updateNumber() {
+        auto sqlite = this;
+        auto response = sqlite->statement("SELECT * FROM number");
+        int number_updated = std::atoi(response[0].first.c_str()) + 1;
+        auto number_updated_str = std::to_string(number_updated);
+        auto statement = std::string("UPDATE number SET num = ") + number_updated_str;
+        sqlite->statement(statement.c_str());
+        return number_updated;
+    }
+
+    std::vector<std::pair<std::string, std::string>> response_buffer;
+    sqlite3 *db = nullptr;
+    int error = 0;
+    char *zErrMsg = 0;
+    bool existed = false;
+
+    SQLite(const char* filename) {
+        existed = std::filesystem::exists(filename);
+        error = sqlite3_open(filename, &db);
+        if (error) {
+            fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+            sqlite3_close(db);
+        }
+        if (!existed)
+        {
+            statement("CREATE TABLE number (num INTEGER)");
+            statement("INSERT INTO number VALUES (0)");
+        }
+    }
+    std::vector<std::pair<std::string, std::string>> statement(const char* statement_, int (*callback_)(void *sqlite_notype, int argc, char **argv, char **azColName) = nullptr)
+    {
+        response_buffer.clear();
+        if (!db) fprintf(stderr, "no DB statement\n");
+        if (!callback_) callback_ = callback;
+        error = sqlite3_exec(db, statement_, callback_, this, &zErrMsg);
+        if( error != SQLITE_OK ){
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        }
+        return response_buffer;
+    }
+    ~SQLite() { sqlite3_close(db); }
+};
+
+
+int main(int argc, char** argv) {
+    if (argc != 2) return ErrorCodes::NO_DB;
+
     const Secrets secrets = Secrets::create();
     if (!secrets.isInit()) return ErrorCodes::NO_SECRET;
+    SQLite sqlite(argv[1]);
 
     bool want_restart = false;
 
@@ -126,6 +191,10 @@ int main() {
     });
     bot.getEvents().onCommand("what", [&bot](Message::Ptr message) {
         bot.getApi().sendMessage(message->chat->id, "ничо");
+    });
+    bot.getEvents().onCommand("добавить", [&bot, &sqlite](Message::Ptr message) {
+        int number_updated = sqlite.updateNumber();
+        bot.getApi().sendMessage(message->chat->id, std::to_string(number_updated));
     });
 
     signal(SIGINT, [](int s) {

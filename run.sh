@@ -1,4 +1,5 @@
 set -x
+
 retVal=2
 while [ $retVal -eq 2 ]
 do
